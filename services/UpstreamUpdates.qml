@@ -28,9 +28,7 @@ Singleton {
         localProc.running = true;
     }
 
-    function evaluate() {
-        if (localSha === "" || remoteSha === "") return;
-        const updated = remoteSha !== localSha;
+    function apply(updated) {
         if (updated && !root.hasUpdates) {
             Quickshell.execDetached(["notify-send",
                 "end4-pC",
@@ -39,6 +37,17 @@ Singleton {
             ])
         }
         root.hasUpdates = updated;
+    }
+
+    function evaluate() {
+        if (localSha === "" || remoteSha === "") return;
+        if (remoteSha === localSha) {
+            root.apply(false);
+            return;
+        }
+        // SHAs differ — for forks this is the norm (local is ahead), so only
+        // ping when the upstream commit is NOT already contained in local HEAD
+        ancestryProc.running = true;
     }
 
     onLocalShaChanged: evaluate()
@@ -83,6 +92,17 @@ Singleton {
         }
         onExited: (exitCode, exitStatus) => {
             if (exitCode !== 0) root.remoteSha = ""; // offline or unreachable; skip silently
+        }
+    }
+
+    Process {
+        id: ancestryProc
+        command: ["bash", "-c", "git -C '" + root.shellDir + "' merge-base --is-ancestor " + root.remoteSha + " HEAD >/dev/null 2>&1 && echo contained || echo not-contained"]
+        stdout: SplitParser {
+            onRead: data => {
+                if (root.localSha === "" || root.remoteSha === "") return; // stale result from a previous check
+                root.apply(data.trim() === "not-contained");
+            }
         }
     }
 }

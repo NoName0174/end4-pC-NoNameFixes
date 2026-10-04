@@ -63,8 +63,8 @@ RippleButton {
         anchors.centerIn: parent
         width: root.isMaterial ? (root.vertical ? 24 : 22) : 19.5
         height: root.isMaterial ? (root.vertical ? 24 : 22) : 19.5
-        source: Config.options.custom.distroIcon || SystemInfo.distroIcon
-        customFolder: Config.options.custom.iconsPath
+        source: Config.options.bar.topLeftIcon == "distro" ? (Config.options.custom.distroIcon || SystemInfo.distroIcon) : `${Config.options.bar.topLeftIcon}-symbolic`
+        customFolder: Config.options.bar.topLeftIcon == "distro" ? Config.options.custom.iconsPath : ""
         colorize: Config.options.custom.colorizeIcon
         color: root.iconColor
 

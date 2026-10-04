@@ -643,7 +643,7 @@ Item {
                                     color: Appearance.colors.colOnTertiaryContainer
                                 }
                                 StyledText {
-                                    text: !Updates.available ? Translation.tr("Update check unavailable") : Updates.checking ? Translation.tr("Checking...") : Translation.tr("Pacman + AUR")
+                                    text: !Updates.available ? Translation.tr("Update check unavailable") : Updates.checking ? Translation.tr("Checking...") : Translation.tr(Updates.updaterName)
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                     color: Appearance.colors.colOnTertiaryContainer
                                     opacity: 0.75

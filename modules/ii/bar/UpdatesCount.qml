@@ -25,6 +25,14 @@ MouseArea {
 
     onClicked: (mouse) => {
         if (mouse.button === Qt.LeftButton) {
+            if (!Updates.canRunUpdate) {
+                Quickshell.execDetached(["notify-send",
+                    Translation.tr("Updates"),
+                    Translation.tr("Update check unavailable for this system"),
+                    "-a", "Shell"
+                ])
+                return;
+            }
             updateProc.running = true
         } else if (mouse.button === Qt.RightButton) {
             Updates.refresh()
@@ -44,8 +52,8 @@ MouseArea {
         id: updateProc
         command: [
             "kitty", "--hold",
-            "fish", "-i", "-l", "-c",
-            "yay -Syu --combinedupgrade=false"
+            "bash", "-c",
+            Updates.updateCommand
         ]
         onExited: (exitCode, exitStatus) => {
             Updates.refresh()

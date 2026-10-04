@@ -502,7 +502,7 @@ Singleton {
                 property bool floatStyleShadow: true // Show shadow behind bar when cornerStyle == 1 (Float)
                 property string borderless: "pills"
                 property list<var> widgetStyles: []
-                property string topLeftIcon: "spark" // Options: "distro" or any icon name in ~/.config/quickshell/ii/assets/icons
+                property string topLeftIcon: "distro" // Options: "distro" or any icon name in the shell's assets/icons folder (without the -symbolic suffix)
                 property bool showBackground: true
                 property bool verbose: true
                 property bool vertical: false
@@ -938,6 +938,10 @@ Singleton {
                 property int checkInterval: 120 // minutes
                 property int adviseUpdateThreshold: 75 // packages
                 property int stronglyAdviseUpdateThreshold: 200 // packages
+                property string distro: "auto" // Options: "auto", "arch", "cachyos", "debian", "fedora", "opensuse", "custom"
+                property string customUpdateCommand: "" // Used when distro == "custom", e.g. "sudo apt update && sudo apt upgrade"
+                property bool notifyUpstreamUpdates: true // Ping when the upstream end4-pC repo has new commits
+                property int upstreamCheckInterval: 360 // minutes
             }
             
             property JsonObject wallpaperSelector: JsonObject {

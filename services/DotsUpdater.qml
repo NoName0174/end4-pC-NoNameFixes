@@ -1,6 +1,7 @@
 pragma Singleton
 
 import qs
+import qs.services
 import QtQuick
 import Quickshell
 
@@ -8,10 +9,11 @@ Singleton {
     id: root
 
     function runSystemUpdate() {
+        // Distro-aware update command, see services/Updates.qml
         Quickshell.execDetached([
             "kitty", "--hold",
-            "fish", "-i", "-l", "-c",
-            "yay -Syu --combinedupgrade=false"
+            "bash", "-c",
+            Updates.updateCommand
         ])
         Qt.callLater(() => GlobalStates.settingsOpen = false)
     }
@@ -22,7 +24,7 @@ Singleton {
             DIR="$HOME/.config/quickshell"
 
             rm -rf "$DIR/end4-pC-tmp"
-            git clone https://github.com/pctrade/end4-pC.git "$DIR/end4-pC-tmp"
+            git clone https://github.com/NoName0174/end4-pC-NoNameFixes.git "$DIR/end4-pC-tmp"
 
             rm -rf "$DIR/end4-pC-old"
             [ -d "$DIR/end4-pC" ] && mv "$DIR/end4-pC" "$DIR/end4-pC-old"

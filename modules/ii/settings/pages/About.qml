@@ -104,6 +104,27 @@ ContentPage {
                 Layout.alignment: Qt.AlignBottom | Qt.AlignRight
                 spacing: 8
                 RippleButton {
+                    visible: UpstreamUpdates.hasUpdates
+                    Layout.preferredHeight: 44
+                    buttonRadius: Appearance.rounding.full
+                    colBackground: Appearance.colors.colTertiaryContainer
+                    colBackgroundHover: Appearance.colors.colTertiaryContainerHover
+                    downAction: () => runUpdateDots()
+                    contentItem: RowLayout {
+                        spacing: 6
+                        MaterialSymbol {
+                            text: "cloud_download"
+                            iconSize: Appearance.font.pixelSize.normal
+                            color: Appearance.colors.colOnTertiaryContainer
+                        }
+                        StyledText {
+                            text: Translation.tr("Upstream update")
+                            color: Appearance.colors.colOnTertiaryContainer
+                            rightPadding: 10
+                        }
+                    }
+                }
+                RippleButton {
                     buttonText: Translation.tr("Update Dots")
                     buttonRadius: Appearance.rounding.full
                     colBackground: Appearance.colors.colPrimaryContainer

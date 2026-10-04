@@ -284,7 +284,7 @@ ContentPage {
 
         ContentSection {
             icon: "deployed_code_update"
-            title: Translation.tr("System updates (Arch only)")
+            title: Translation.tr("System updates")
 
             GroupedList {
                 ConfigSwitch {
@@ -305,6 +305,68 @@ ContentPage {
                     stepSize: 60
                     onValueChanged: {
                         Config.options.updates.checkInterval = value;
+                    }
+                }
+
+                ConfigComboBox {
+                    Layout.fillWidth: true
+                    buttonIcon: "desktop_windows"
+                    text: Translation.tr("Distro / package manager")
+                    description: Translation.tr("Auto-detect reads /etc/os-release. Custom uses the command below.")
+                    fieldWidth: 240
+                    model: [
+                        { "displayName": Translation.tr("Auto-detect"), "icon": "travel_explore", "value": "auto" },
+                        { "displayName": "Arch (yay → paru → pacman)", "icon": "terminal", "value": "arch" },
+                        { "displayName": "CachyOS (cachy-update)", "icon": "terminal", "value": "cachyos" },
+                        { "displayName": "Debian / Ubuntu (apt)", "icon": "terminal", "value": "debian" },
+                        { "displayName": "Fedora (dnf)", "icon": "terminal", "value": "fedora" },
+                        { "displayName": "openSUSE (zypper)", "icon": "terminal", "value": "opensuse" },
+                        { "displayName": Translation.tr("Custom command"), "icon": "edit", "value": "custom" },
+                    ]
+                    currentValue: Config.options.updates.distro
+                    onSelected: newValue => {
+                        Config.options.updates.distro = newValue;
+                    }
+                }
+
+                ConfigTextArea {
+                    id: customUpdateCommandField
+                    visible: Config.options.updates.distro === "custom"
+                    Layout.fillWidth: true
+                    buttonIcon: "terminal"
+                    text: Translation.tr("Custom update command")
+                    placeholderText: Translation.tr("e.g. sudo apt update && sudo apt upgrade")
+                    value: Config.options.updates.customUpdateCommand
+                    onValueChanged: customUpdateCommandDebounce.restart()
+
+                    Timer {
+                        id: customUpdateCommandDebounce
+                        interval: 500
+                        repeat: false
+                        onTriggered: {
+                            Config.options.updates.customUpdateCommand = customUpdateCommandField.value;
+                        }
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "cloud_download"
+                    text: Translation.tr("Notify about upstream end4-pC updates")
+                    checked: Config.options.updates.notifyUpstreamUpdates
+                    onCheckedChanged: {
+                        Config.options.updates.notifyUpstreamUpdates = checked;
+                    }
+                }
+
+                ConfigSpinBox {
+                    icon: "av_timer"
+                    text: Translation.tr("Upstream check interval (mins)")
+                    value: Config.options.updates.upstreamCheckInterval
+                    from: 30
+                    to: 1440
+                    stepSize: 30
+                    onValueChanged: {
+                        Config.options.updates.upstreamCheckInterval = value;
                     }
                 }
             }

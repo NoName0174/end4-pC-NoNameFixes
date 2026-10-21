@@ -147,8 +147,74 @@ Singleton {
         command: ["bash", "-c", root.info.countCmd]
         stdout: StdioCollector {
             onStreamFinished: {
-                root.count = parseInt(text.trim()) || 0
+                root.count = parseInt(text.trim()) || 0;
+                root.maybeNotifySystem(root.count);
             }
         }
+    }
+
+    // --- Notify once per new state, with an "Update now" action -------------
+    // State survives quickshell reloads, so an unchanged update count never
+    // re-notifies. A fresh count (e.g. more updates arrived) re-notifies.
+    function maybeNotifySystem(count) {
+        if (!Config.ready || !Config.options.updates.notifySystemUpdates) return;
+        if (count <= 0 || count === systemState.lastNotifiedCount) return;
+        notifyProc.command = ["notify-send",
+            "-a", "Shell",
+            "-t", "600000",
+            "-r", "772102",
+            "-A", "update=Update now",
+            `${count} system update${count === 1 ? "" : "s"} available`,
+            `${root.updaterName}. "Update now" runs it in a terminal.`];
+        notifyProc.running = true;
+        systemState.lastNotifiedCount = count;
+        systemStateWriteTimer.restart();
+    }
+
+    Process {
+        id: notifyProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (text.trim().toLowerCase() === "update") root.runUpdateInTerminal();
+            }
+        }
+        onExited: (exitCode, exitStatus) => {}
+    }
+
+    // Pick a concrete update tool from Config.options.updates.systemUpdateTool.
+    // "auto" prefers the distro-native tool (cachy-update on CachyOS).
+    function toolCommand() {
+        const tool = Config.options.updates.systemUpdateTool;
+        if (tool === "cachy-update") return "cachy-update";
+        if (tool === "yay") return "yay -Syu --combinedupgrade=false";
+        if (tool === "paru") return "paru -Syu";
+        if (tool === "pacman") return "pkexec pacman -Syu";
+        if (resolvedDistro === "cachyos") return "cachy-update";
+        return info.updateCmd;
+    }
+
+    function runUpdateInTerminal() {
+        if (!root.canRunUpdate) return;
+        const scriptPath = FileUtils.trimFileProtocol(`${Directories.scriptPath}/updates/run-system-update.sh`);
+        Quickshell.execDetached(["kitty", "-e", "bash", scriptPath, root.toolCommand()]);
+    }
+
+    FileView {
+        id: systemStateFile
+        path: `${Directories.state}/user/system-updates.json`
+        watchChanges: false
+        onAdapterUpdated: systemStateWriteTimer.restart()
+
+        JsonAdapter {
+            id: systemState
+            property int lastNotifiedCount: -1
+        }
+    }
+
+    Timer {
+        id: systemStateWriteTimer
+        interval: 100
+        repeat: false
+        onTriggered: systemStateFile.writeAdapter()
     }
 }

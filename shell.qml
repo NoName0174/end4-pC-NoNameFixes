@@ -1,6 +1,7 @@
 //@ pragma UseQApplication
 //@ pragma Env QS_NO_RELOAD_POPUP=1
 //@ pragma Env QT_QUICK_CONTROLS_STYLE=Basic
+//@ pragma IconTheme Custom-Papirus
 //@ pragma Env QT_QUICK_FLICKABLE_WHEEL_DECELERATION=10000
 //@ pragma Env QT_LOGGING_RULES=qt.text.font.db.info=false
 // Remove two slashes below and adjust the value to change the UI scale

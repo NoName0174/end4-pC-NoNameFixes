@@ -284,6 +284,9 @@ ContentPage {
                         clip: true
                         interactive: contentHeight > height
                         boundsBehavior: Flickable.StopAtBounds
+
+                        TouchpadScrollArea { flickable: optionsFlick }
+
                         ScrollBar.vertical: StyledScrollBar {}
 
                         ColumnLayout {
@@ -463,6 +466,7 @@ ContentPage {
                                 popupTitle: Translation.tr("Bar style")
                                 options: [
                                     { displayName: Translation.tr("Hug"), icon: "line_curve", value: 0 },
+                                    { displayName: Translation.tr("Split Hug"), icon: "splitscreen", value: 6 },
                                     { displayName: Translation.tr("Float"), icon: "view_day", value: 1 },
                                     { displayName: Translation.tr("Islands"), icon: "crop_3_2", value: 2 },
                                     { displayName: Translation.tr("M3"), icon: "interests", value: 3 },

@@ -83,7 +83,7 @@ Scope {
 
                 exclusiveZone: (barContent.centerOnly && Config.options.bar.centerOnlyReserveFrame)
                     ? Config.options.bar.frameThickness
-                    : (Config.options.bar.cornerStyle === 4 || Config.options.bar.cornerStyle === 5) ? normalExclusiveZone + 4 : normalExclusiveZone
+                    : (Config.options.bar.cornerStyle === 4 || Config.options.bar.cornerStyle === 5 || Config.options.bar.cornerStyle === 6) ? normalExclusiveZone + 4 : normalExclusiveZone
                 WlrLayershell.namespace: "quickshell:bar"
                 // Overlay layer only while special workspace sits on top of a fullscreen window on this monitor,
                 // else Top layer so fullscreen apps cover the bar as normal (Hyprland buries Top layer under fullscreen+special).
@@ -139,6 +139,19 @@ Scope {
 
                 MouseArea  {
                     id: hoverRegion
+                    Binding {
+                        target: GlassLayers
+                        property: "barZone"
+                        value: Math.max(0, barRoot.exclusiveZone)
+                        restoreMode: Binding.RestoreBinding
+                    }
+                    Binding {
+                        target: GlassLayers
+                        property: "barEdge"
+                        value: Config.options.bar.bottom ? "bottom" : "top"
+                        restoreMode: Binding.RestoreBinding
+                    }
+
                     hoverEnabled: true
                     anchors {
                         fill: parent
@@ -205,8 +218,8 @@ Scope {
                             bottom: undefined
                         }
                         height: Appearance.rounding.screenRounding
-                        active: (showBarBackground && Config.options.bar.cornerStyle === 0 && !barContent.centerOnly)
-                             || (Config.options.bar.cornerStyle === 4)
+                        active: !barContent.glassTabs && !barContent.glassHug && ((showBarBackground && Config.options.bar.cornerStyle === 0 && !barContent.centerOnly)
+                             || (Config.options.bar.cornerStyle === 4 || Config.options.bar.cornerStyle === 6))
 
                         states: State {
                             name: "bottom"
@@ -225,14 +238,15 @@ Scope {
                         sourceComponent: Item {
                             implicitHeight: Appearance.rounding.screenRounding
 
-                            readonly property color decoratorColor: (Config.options.bar.cornerStyle === 4 || showBarBackground)
+                            readonly property color decoratorColor: (Config.options.bar.cornerStyle === 4 || Config.options.bar.cornerStyle === 6 || showBarBackground)
                                 ? (Config.options.bar.followFrameColor && Config.options.bar.frameColor
                                     ? Appearance.getColorFromName(Config.options.bar.frameColor)
-                                    : Appearance.colors.colLayer0)
+                                    : Appearance.colors.colUiBackground)
                                 : "transparent"
 
                             RoundCorner {
                                 id: leftCorner
+                                glass: true
                                 visible: Config.options.bar.cornerStyle === 0 || barContent.effectiveLeftLayout.length > 0
                                 anchors {
                                     top: parent.top
@@ -254,6 +268,7 @@ Scope {
                             }
                             RoundCorner {
                                 id: rightCorner
+                                glass: true
                                 visible: Config.options.bar.cornerStyle === 0 || barContent.effectiveRightLayout.length > 0
                                 anchors {
                                     right: parent.right

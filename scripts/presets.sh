@@ -4,6 +4,7 @@
 #   presets.sh --save <name> [description]
 #   presets.sh --remove <name> [--online]
 #   presets.sh --apply <name> [--online]
+#   presets.sh --rename <name> <new_name>
 #   presets.sh --export-zip <name>
 #   presets.sh --import-zip <zip_path>
 
@@ -27,7 +28,11 @@ BLACKLIST_FILTER='del(._presetMeta)
   | del(.ai, .networking, .musicRecognition, .search, .screenRecord, .screenSnip, .updates)
   | del(.bar.weather)
   | del(.appearance.fonts)
-  | del(.hyprland.input, .hyprland.autostartApps, .hyprland.general.layout)'
+  | del(.profile.onlinePresets, .profile.uploadGuideSeen)
+  | del(.hyprland.input, .hyprland.autostartApps, .hyprland.general.layout)
+  | del(.dock.pinnedApps, .launcher.pinnedApps, .tray.pinnedItems)
+  | del(.sidebar.booru, .wallpaperSelector.userPath)
+  | walk(if type == "object" then with_entries(select(.key | test("^(.*api[-_]?key|secret|password|token|username|e-?mail)$"; "i") | not)) else . end)'
 
 SHARE_FILTER='with_entries(select(.key as $k | ["appearance","background","bar","calendar","crosshair","dock","interactions","launcher","light","lock","media","notifications","osd","osk","overlay","overview","panelFamily","profile","regionSelector","resources","settings","sidebar","tray","wallpaperSelector","windows","hyprland"] | index($k)))
   | if (.hyprland | type) == "object" then .hyprland |= with_entries(select(.key as $k | ["decoration","gaps","animations","general"] | index($k))) else . end'
@@ -149,6 +154,14 @@ case "$action" in
             rm -rf "$IMPORTED_PRESETS_DIR/assets/${name}"
         fi
         ;;
+    --rename)
+        new_name="${description//[[:space:]]/_}"
+        if [ -z "$new_name" ] || [ ! -f "$PRESETS_DIR/${name}.json" ] || [ -e "$PRESETS_DIR/${new_name}.json" ]; then
+            exit 1
+        fi
+        mv "$PRESETS_DIR/${name}.json" "$PRESETS_DIR/${new_name}.json"
+        echo "$new_name"
+        ;;
     --apply)
         preset_file="$PRESETS_DIR/${name}.json"
         if [ ! -f "$preset_file" ]; then
@@ -246,6 +259,33 @@ case "$action" in
             | walk(if type == "string" and test("^[A-Za-z][A-Za-z0-9+.-]*://") then "" else . end)
             | if (.background.collage.tree? // null) != null then .background.collage.tree |= (try (fromjson | scrub | tojson) catch .) else . end' \
             "$filtered" > "$scrubbed" && mv "$scrubbed" "$filtered"
+        fix_extension() {
+            local img="$1" want base new current
+            case "$(file -b --mime-type "$img" 2>/dev/null)" in
+                image/png) want=png ;;
+                image/jpeg) want=jpg ;;
+                image/webp) want=webp ;;
+                *) return 0 ;;
+            esac
+            base="${img##*/}"
+            current="${base##*.}"
+            [ "$current" = jpeg ] && current=jpg
+            [ "${current,,}" = "$want" ] && return 0
+            new="${base%.*}.$want"
+            [ -e "$tmpdir/$new" ] && new="${base%.*}-fixed.$want"
+            mv "$img" "$tmpdir/$new"
+            for target in "$filtered" "$tmpdir/meta.json"; do
+                jq --arg old "$base" --arg new "$new" \
+                    'def swap: walk(if type == "string" and . == $old then $new else . end);
+                     swap | if (.background.collage.tree? // null) != null then .background.collage.tree |= (try (fromjson | swap | tojson) catch .) else . end' \
+                    "$target" > "$target.tmp" && mv "$target.tmp" "$target"
+            done
+        }
+        if command -v file >/dev/null 2>&1; then
+            for img in "$tmpdir"/*.png "$tmpdir"/*.jpg "$tmpdir"/*.jpeg "$tmpdir"/*.webp; do
+                [ -f "$img" ] && fix_extension "$img"
+            done
+        fi
         # preview: try to generate or copy existing preview if exists in assets
         # Just include filtered json + meta + wallpaper basename
         size_limit=$((9 * 1024 * 1024 + 512 * 1024))

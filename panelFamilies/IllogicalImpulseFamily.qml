@@ -54,7 +54,7 @@ Scope {
     PanelLoader { delay: 3500; panelSource: "panelFamilies/loaders/WallpaperSelectorLoader.qml" }
     PanelLoader { delay: 3800; panelSource: "panelFamilies/loaders/SettingsLoader.qml" }
     PanelLoader { delay: 4100; panelSource: "panelFamilies/loaders/DesktopMenuLoader.qml" }
-    PanelLoader { delay: 4100; panelSource: "panelFamilies/loaders/DropShelfPanelLoader.qml" }
+    PanelLoader { delay: 4100; extraCondition: GlobalStates.dropShelfOpen; panelSource: "panelFamilies/loaders/DropShelfPanelLoader.qml" }
     PanelLoader { delay: 4300; panelSource: "panelFamilies/loaders/NiriBackdropLoader.qml" }
     PanelLoader { delay: 4300; extraCondition: Config.options.bar.vertical; panelSource: "panelFamilies/loaders/VerticalBarLoader.qml" }
     PanelLoader { delay: 4600; panelSource: "panelFamilies/loaders/ScreenFrameLoader.qml" }

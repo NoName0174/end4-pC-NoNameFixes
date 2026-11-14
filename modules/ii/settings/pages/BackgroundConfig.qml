@@ -298,6 +298,35 @@ ContentPage {
             }
         
             ContentSubsection {
+                title: Translation.tr("Live wallpaper")
+                Layout.fillWidth: true
+
+                GroupedList {
+                    ConfigSwitch {
+                        Layout.fillWidth: true
+                        buttonIcon: "battery_saver"
+                        text: Translation.tr("Pause on battery")
+                        checked: Config.options.background.liveWallpaper.pauseOnBattery
+                        onClicked: {
+                            Config.options.background.liveWallpaper.pauseOnBattery = !Config.options.background.liveWallpaper.pauseOnBattery;
+                        }
+                    }
+                    ConfigSpinBox {
+                        Layout.fillWidth: true
+                        icon: "battery_android_alert"
+                        text: Translation.tr("Pause below charge (%, 0 to ignore)")
+                        value: Config.options.background.liveWallpaper.pauseBelowPercent
+                        from: 0
+                        to: 100
+                        stepSize: 5
+                        onValueChanged: {
+                            Config.options.background.liveWallpaper.pauseBelowPercent = value;
+                        }
+                    }
+                }
+            }
+
+            ContentSubsection {
                 title: Translation.tr("Centered wallpaper")
                 Layout.fillWidth: true
 
@@ -381,6 +410,16 @@ ContentPage {
                         if (checked && !Config.options.background.collage.enable) Collage.reset()
                         Config.options.background.collage.enable = checked
                     }
+                }
+                ConfigComboBox {
+                    Layout.fillWidth: true
+                    buttonIcon: "dashboard_customize"
+                    text: Translation.tr("Layout")
+                    fieldWidth: 220
+                    fixedWidth: true
+                    model: Collage.presetOptions
+                    currentValue: Collage.currentPreset
+                    onSelected: newValue => Collage.applyPresetByName(newValue)
                 }
                 ConfigSpinBox {
                     icon: "space_bar"
@@ -519,6 +558,11 @@ ContentPage {
                             value: "cookie"
                         },
                         {
+                            displayName: Translation.tr("Daily"),
+                            icon: "today",
+                            value: "daily"
+                        },
+                        {
                             displayName: Translation.tr("Pixel"),
                             icon: "grid_view",
                             value: "pixel"
@@ -542,6 +586,11 @@ ContentPage {
                             displayName: Translation.tr("Cookie"),
                             icon: "cookie",
                             value: "cookie"
+                        },
+                        {
+                            displayName: Translation.tr("Daily"),
+                            icon: "today",
+                            value: "daily"
                         },
                         {
                             displayName: Translation.tr("Pixel"),
@@ -1018,6 +1067,31 @@ ContentPage {
                     ]
                     onSelected: newValue => {
                         Config.options.background.widgets.customImage.shape = newValue
+                    }
+                }
+                ConfigSwitch {
+                    Layout.fillWidth: true
+                    buttonIcon: "photo_size_select_large"
+                    text: Translation.tr("Image card")
+                    checked: Config.options.background.widgets.imageCard.enable
+                    onCheckedChanged: {
+                        Config.options.background.widgets.imageCard.enable = checked;
+                    }
+                }
+                ConfigSelectionArray {
+                    enabled: Config.options.background.widgets.imageCard.enable
+                    text: Translation.tr("Image card layout")
+                    icon: "grid_view"
+                    currentValue: Config.options.background.widgets.imageCard.sizeMode
+                    options: [
+                        { displayName: "1x1", icon: "crop_square", value: "1x1" },
+                        { displayName: "1x2", icon: "crop_landscape", value: "1x2" },
+                        { displayName: "1x3", icon: "crop_16_9", value: "1x3" },
+                        { displayName: "2x2", icon: "grid_view", value: "2x2" },
+                        { displayName: "2x3", icon: "view_module", value: "2x3" }
+                    ]
+                    onSelected: newValue => {
+                        Config.options.background.widgets.imageCard.sizeMode = newValue
                     }
                 }
             }

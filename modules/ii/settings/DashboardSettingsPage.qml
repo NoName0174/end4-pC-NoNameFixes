@@ -82,6 +82,10 @@ Item {
         if (type === "style") return [2, 2];
         if (type === "schemes" || type === "barpos") return [2, 2];
         if (type === "weathermap") return [4, 2];
+        if (type === "webapps") return [4, 3];
+        if (type === "batterystyle") return [4, 2];
+        if (type === "collagelayouts") return [4, 2];
+        if (type === "timepreview") return [3, 2];
         if (type === "widgets") return [4, 3];
         if (type === "shape") return [2, 2];
         if (type === "barlayout") return [4, 3];
@@ -95,13 +99,16 @@ Item {
         { id: "hero:style", type: "style", title: Translation.tr("Settings panel style"), section: Translation.tr("Interface"), kw: "settings panel style default minimal dashboard window overlay" },
         { id: "hero:blur", type: "toggle", key: "desktop:Blur wall", title: Translation.tr("Blur wallpaper"), icon: "blur_on", section: Translation.tr("Desktop"), kw: "blur wallpaper background" },
         { id: "hero:transparency", type: "toggle", key: "interface:Transparency/Enable", title: Translation.tr("Transparency"), icon: "opacity", section: Translation.tr("Interface"), kw: "transparency opacity" },
+        { id: "hero:glass", type: "toggle", key: "interface:Glassy UI", title: Translation.tr("Glassy UI"), icon: "water_drop", section: Translation.tr("Interface"), kw: "glassy ui liquid glass frosted blur translucent ui panels bar sidebars dock widgets" },
         { id: "hero:collage", type: "toggle", key: "desktop:Collage enable", title: Translation.tr("Multiple wallpapers"), icon: "grid_view", section: Translation.tr("Desktop"), kw: "multiple wallpapers collage tiles" },
         { id: "hero:centered", type: "toggle", key: "desktop:Wallpaper/Centered wallpaper/Enable", title: Translation.tr("Centered wallpaper"), icon: "filter_center_focus", section: Translation.tr("Desktop"), kw: "centered wallpaper" },
         { id: "hero:schemes", type: "schemes", title: Translation.tr("Color scheme"), section: Translation.tr("Interface"), kw: "color scheme theme palette accent catppuccin gruvbox nord dracula tokyo everforest one dark" },
+        { id: "hero:uibg", type: "select", w: 2, key: "interface:UI background", title: Translation.tr("UI background"), icon: "format_color_fill", section: Translation.tr("Interface"), kw: "ui background oled black amoled themed dark surface layer panels sidebars" },
         { id: "hero:palette", type: "palette", when: "material", key: "interface:Palette type", title: Translation.tr("Palette style"), icon: "auto_awesome", section: Translation.tr("Interface"), kw: "palette style scheme auto content expressive fidelity fruit salad monochrome neutral rainbow tonal spot material you dynamic" },
         { id: "hero:barpos", type: "barpos", title: Translation.tr("Bar position"), section: Translation.tr("Bar"), kw: "bar position top bottom left right vertical panel" },
         { id: "hero:tooltips", type: "toggle", w: 2, searchable: true, key: "bar:Tooltips/Enable", title: Translation.tr("Tooltips"), icon: "tooltip", section: Translation.tr("Bar"), kw: "bar tooltips enable hover" },
-        { id: "hero:tooltipsClick", type: "toggle", w: 2, searchable: true, key: "bar:Click to show", title: Translation.tr("Click to show"), icon: "ads_click", section: Translation.tr("Bar"), kw: "bar tooltips click to show" }
+        { id: "hero:tooltipsClick", type: "toggle", w: 2, searchable: true, key: "bar:Click to show", title: Translation.tr("Click to show"), icon: "ads_click", section: Translation.tr("Bar"), kw: "bar tooltips click to show" },
+        { id: "hero:tooltipsStyle", type: "select", w: 4, searchable: true, key: "bar:Tooltips/Style", title: Translation.tr("Tooltip style"), icon: "tooltip", section: Translation.tr("Bar"), kw: "bar tooltips style morph attached popup" }
     ]
 
     readonly property var allEntries: {
@@ -110,7 +117,7 @@ Item {
         catalog.sections.forEach((section, si) => {
             list.push({ id: "section:" + si, kind: "header", requires: section.requires ?? "", when: section.when ?? "", title: section.title, icon: section.icon, page: section.page ?? "", group: section.page ?? "", section: section.title, sectionIndex: si, count: section.cards.length });
             section.cards.forEach(card => list.push(Object.assign({
-                id: card.key, kind: "card", requires: section.requires ?? "", when: section.when ?? "", group: section.page ?? "", section: section.title, sectionIndex: si, kw: card.kw ?? ""
+                id: card.key, kind: "card", ordered: section.ordered ?? false, requires: section.requires ?? "", when: card.when ?? section.when ?? "", group: section.page ?? "", section: section.title, sectionIndex: si, kw: card.kw ?? ""
             }, card)));
         });
         const heroGroups = {};
@@ -135,8 +142,18 @@ Item {
     function isVisibleEntry(e) {
         if (e.when === "material" && ColorSchemes.current !== "") return false;
         if (e.when === "hyprland" && WM.compositor !== "hyprland") return false;
+        if (e.when === "layoutdwindle" && (WM.compositor !== "hyprland" || Config.options.hyprland.general.layout !== "dwindle")) return false;
+        if (e.when === "layoutmaster" && (WM.compositor !== "hyprland" || Config.options.hyprland.general.layout !== "master")) return false;
+        if (e.when === "hyprbordercolor" && (WM.compositor !== "hyprland" || !Config.options.hyprland.general.borderColor.enable)) return false;
+        if (e.when === "glass" && !Config.options.background.widgets.glass.enable) return false;
+        if (e.when === "football" && !Config.options.sidebar.football.enable) return false;
+        if (e.when === "dockmagnify" && !Config.options.dock.magnify) return false;
         if (e.when === "dockhug" && Config.options.dock.style !== "hug") return false;
-        if (e.when === "dockfloat" && Config.options.dock.style === "hug") return false;
+        if (e.when === "dockfloat" && Config.options.dock.style !== "float") return false;
+        if (e.when === "clockdigital" && Config.options.background.widgets.clock.style !== "digital") return false;
+        if (e.when === "clockcookie" && Config.options.background.widgets.clock.style !== "cookie") return false;
+        if (e.when === "clockdaily" && Config.options.background.widgets.clock.style !== "daily") return false;
+        if (e.when === "clockpixel" && Config.options.background.widgets.clock.style !== "pixel") return false;
         return !e.requires || usedWidgets.includes(e.requires);
     }
 
@@ -150,26 +167,76 @@ Item {
             if (e.kind !== "card" || (e.hero && e.type === "toggle" && !e.searchable) || !isVisibleEntry(e)) return;
             const key = normalized([e.title, e.section, e.kw, e.key ?? ""].join(" "));
             const score = Wallpapers.scoreItem(key, tokens);
-            if (score >= 0) scored.push({ entry: e, score: score });
+            if (score < 0) return;
+            const sectionScore = Wallpapers.scoreItem(normalized(e.section ?? ""), tokens);
+            scored.push({ entry: e, score: sectionScore >= 0 ? score + 1000 : score });
         });
         scored.sort((a, b) => b.score - a.score);
         return scored.map(s => s.entry);
     }
 
-    function packRows(cards, capacity) {
-        const fulls = cards.filter(c => spanOf(c)[0] === 4);
-        const wides = cards.filter(c => spanOf(c)[0] === 2);
-        const smalls = cards.filter(c => spanOf(c)[0] === 1);
+    function isEnableCard(card) {
+        return card.type === "toggle" && !card.keepOrder && card.title === Translation.tr("Enable");
+    }
+
+    function packSequential(cards, capacity) {
         const placed = [];
         let remaining = capacity;
         let rowStart = 0;
-        fulls.concat(wides, smalls).forEach(card => {
-            const span = spanOf(card)[0];
+        cards.forEach(card => {
+            const span = Math.min(spanOf(card)[0], capacity);
             if (span > remaining) {
+                let leftover = remaining;
+                let i = placed.length - 1;
+                while (leftover > 0 && i >= rowStart) {
+                    placed[i].w += 1;
+                    leftover--;
+                    i = i === rowStart ? placed.length - 1 : i - 1;
+                }
                 remaining = capacity;
                 rowStart = placed.length;
             }
             placed.push({ entry: card, w: span, h: spanOf(card)[1] });
+            remaining -= span;
+            if (remaining === 0) {
+                remaining = capacity;
+                rowStart = placed.length;
+            }
+        });
+        let leftover = remaining === capacity ? 0 : remaining;
+        let i = placed.length - 1;
+        while (leftover > 0 && i >= rowStart) {
+            placed[i].w += 1;
+            leftover--;
+            i = i === rowStart ? placed.length - 1 : i - 1;
+        }
+        return placed;
+    }
+
+    function packRows(allCards, capacity) {
+        if (allCards.length > 0 && allCards[0].ordered) return packSequential(allCards, capacity);
+        const enables = allCards.filter(c => isEnableCard(c));
+        const cards = allCards.filter(c => !isEnableCard(c));
+        const fulls = cards.filter(c => spanOf(c)[0] === 4);
+        const wides = cards.filter(c => spanOf(c)[0] === 2);
+        const allSmalls = cards.filter(c => spanOf(c)[0] === 1);
+        const tall = cards.filter(c => spanOf(c)[0] === 3);
+        const side = tall.length > 0 ? allSmalls.slice(0, 2) : [];
+        const smalls = allSmalls.slice(side.length);
+        const placed = [];
+        enables.forEach(card => placed.push({ entry: card, w: 1, h: 1 }));
+        tall.forEach(card => placed.push({ entry: card, w: 3, h: spanOf(card)[1] }));
+        side.forEach(card => placed.push({ entry: card, w: 1, h: 1 }));
+        let remaining = capacity;
+        let rowStart = placed.length;
+        const ghosts = wides.length === 0 ? enables.map(() => ({ ghost: true })) : [];
+        fulls.concat(ghosts, wides, smalls).forEach(card => {
+            const span = card.ghost ? 1 : spanOf(card)[0];
+            if (span > remaining) {
+                remaining = capacity;
+                rowStart = placed.length;
+            }
+            if (!card.ghost) placed.push({ entry: card, w: span, h: spanOf(card)[1] });
             remaining -= span;
             if (remaining === 0) {
                 remaining = capacity;
@@ -356,6 +423,24 @@ Item {
         return best;
     }
 
+    property string pendingSection: ""
+
+    function openSection(groupName, sectionTitle) {
+        GlobalStates.dashboardGroup = groupName;
+        root.pendingSection = sectionTitle;
+        pendingScrollTimer.restart();
+    }
+
+    Timer {
+        id: pendingScrollTimer
+        interval: 280
+        onTriggered: {
+            const index = catalog.sections.findIndex(section => (section.page ?? "") === root.group && section.title === root.pendingSection);
+            if (index >= 0) root.scrollToSection(index);
+            root.pendingSection = "";
+        }
+    }
+
     function scrollToSection(index) {
         const place = layoutMap["section:" + index];
         if (place) flick.contentY = Math.max(0, Math.min(place.y, Math.max(0, flick.contentHeight - flick.height)));
@@ -472,8 +557,13 @@ Item {
             flickDeceleration: 4000
             maximumFlickVelocity: 2500
 
+            TouchpadScrollArea {
+                id: touchpadScroll
+                flickable: flick
+            }
+
             Behavior on contentY {
-                enabled: !flick.moving && !flick.dragging
+                enabled: !touchpadScroll.scrolling && !flick.moving && !flick.dragging
                 NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
             }
 
@@ -525,6 +615,7 @@ Item {
                             : modelData.type === "schemes" ? schemesComponent
                             : modelData.type === "barpos" ? barposComponent
                             : modelData.type === "toggle" ? toggleComponent
+                            : modelData.type === "reset" ? resetComponent
                             : modelData.type === "slider" ? sliderComponent
                             : modelData.type === "spin" ? spinComponent
                             : modelData.type === "combo" ? comboComponent
@@ -535,7 +626,11 @@ Item {
                             : modelData.type === "palette" ? paletteComponent
                             : modelData.type === "duration" ? durationComponent
                             : modelData.type === "iconpicker" ? iconPickerComponent
+                            : modelData.type === "timepreview" ? timePreviewComponent
+                            : modelData.type === "collagelayouts" ? collageLayoutsComponent
                             : modelData.type === "weathermap" ? weatherMapComponent
+                            : modelData.type === "webapps" ? webappsComponent
+                            : modelData.type === "batterystyle" ? batteryStyleComponent
                             : modelData.type === "widgets" ? widgetsComponent
                             : selectComponent
 
@@ -642,11 +737,29 @@ Item {
                             id: toggleComponent
                             DashboardToggleCard {
                                 anchors.fill: parent
+                                actionIcon: slot.modelData.action?.icon ?? ""
+                                actionTip: slot.modelData.action?.tip ?? ""
+                                onActionTriggered: root.openSection(slot.modelData.action.group, slot.modelData.action.section)
                                 controlKey: slot.modelData.key
                                 override: catalog.controlFor(slot.modelData.key)
                                 title: slot.modelData.title
                                 icon: slot.modelData.icon
                                 tileShape: slot.modelData.shape
+                                pager: root.pager
+                                staggerMs: root.staggerMs
+                                animIndex: slot.index % 6
+                                travelX: slot.modelData.travelX
+                                travelY: slot.modelData.travelY
+                            }
+                        }
+
+                        Component {
+                            id: resetComponent
+                            DashboardResetCard {
+                                anchors.fill: parent
+                                override: catalog.controlFor(slot.modelData.key)
+                                title: slot.modelData.title
+                                icon: slot.modelData.icon
                                 pager: root.pager
                                 staggerMs: root.staggerMs
                                 animIndex: slot.index % 6
@@ -732,6 +845,62 @@ Item {
                                 title: slot.modelData.title
                                 icon: slot.modelData.icon
                                 tileShape: slot.modelData.shape
+                                pager: root.pager
+                                staggerMs: root.staggerMs
+                                animIndex: slot.index % 6
+                                travelX: slot.modelData.travelX
+                                travelY: slot.modelData.travelY
+                            }
+                        }
+
+                        Component {
+                            id: timePreviewComponent
+                            DashboardTimeCard {
+                                anchors.fill: parent
+                                title: slot.modelData.title
+                                icon: slot.modelData.icon
+                                tileShape: slot.modelData.shape
+                                pager: root.pager
+                                staggerMs: root.staggerMs
+                                animIndex: slot.index % 6
+                                travelX: slot.modelData.travelX
+                                travelY: slot.modelData.travelY
+                            }
+                        }
+
+                        Component {
+                            id: collageLayoutsComponent
+                            DashboardCollageLayoutsCard {
+                                anchors.fill: parent
+                                title: slot.modelData.title
+                                icon: slot.modelData.icon
+                                tileShape: slot.modelData.shape
+                                pager: root.pager
+                                staggerMs: root.staggerMs
+                                animIndex: slot.index % 6
+                                travelX: slot.modelData.travelX
+                                travelY: slot.modelData.travelY
+                            }
+                        }
+
+                        Component {
+                            id: batteryStyleComponent
+                            DashboardBatteryCard {
+                                anchors.fill: parent
+                                pager: root.pager
+                                staggerMs: root.staggerMs
+                                animIndex: slot.index % 6
+                                travelX: slot.modelData.travelX
+                                travelY: slot.modelData.travelY
+                            }
+                        }
+
+                        Component {
+                            id: webappsComponent
+                            DashboardWebappsCard {
+                                anchors.fill: parent
+                                title: slot.modelData.title
+                                icon: slot.modelData.icon
                                 pager: root.pager
                                 staggerMs: root.staggerMs
                                 animIndex: slot.index % 6

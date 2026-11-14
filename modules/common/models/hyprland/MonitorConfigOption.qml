@@ -55,6 +55,7 @@ NestableObject {
     }
 
     function _modeToLua(m) {
+        if (!m.currentMode) return ""
         const parts = m.currentMode.match(/(\d+)x(\d+)@([\d.]+)Hz/)
         return parts ? `${parts[1]}x${parts[2]}@${parseFloat(parts[3])}` : m.currentMode
     }
@@ -70,7 +71,7 @@ NestableObject {
         if (changedKeys.has("x") || changedKeys.has("y")) {
             setPairs["position"] = `${m.x}x${m.y}`
         }
-        if (changedKeys.has("currentMode") || changedKeys.has("width") || changedKeys.has("height") || changedKeys.has("refreshRate")) {
+        if ((changedKeys.has("currentMode") || changedKeys.has("width") || changedKeys.has("height") || changedKeys.has("refreshRate")) && m.currentMode && m.width > 0 && m.height > 0) {
             setPairs["mode"] = root._modeToLua(m)
         }
         if (changedKeys.has("scale")) setPairs["scale"] = m.scale
@@ -105,6 +106,15 @@ NestableObject {
         const changed = root._pendingChanges[index]
         if (!changed) return
         const changedKeys = new Set(Object.keys(changed))
+        // Persist the full geometry, not only the field the user touched. A
+        // monitor with no block yet (a projector connected for the first time)
+        // needs its mode/position/scale, or a reload would move it to 0x0.
+        changedKeys.add("disabled")
+        changedKeys.add("x")
+        changedKeys.add("y")
+        changedKeys.add("scale")
+        changedKeys.add("transform")
+        if (m.currentMode && m.width > 0 && m.height > 0) changedKeys.add("currentMode")
         const { setPairs, resetKeys } = root._fieldsToWrite(m, changedKeys)
 
         if (Object.keys(setPairs).length === 0 && resetKeys.length === 0) return
@@ -121,16 +131,31 @@ NestableObject {
         root._pendingChanges = pending
     }
 
+    function _luaString(value) {
+        return '"' + String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"'
+    }
+
     function applyMonitor(m) {
         if (!m.name) return
 
-        const base = `${m.name},${m.currentMode},${m.x}x${m.y},${m.scale}`
-        applyProc.command = ["hyprctl", "keyword", "monitor",
-            m.disabled
-                ? `${m.name},disable`
-                : (m.transform && m.transform !== 0)
-                    ? `${base},transform,${m.transform}`
-                    : base]
+        // hyprctl keyword is gone in Hyprland 0.57 (Lua configs), so apply
+        // through the same Lua API the config files use.
+        let code
+        if (m.disabled) {
+            code = `hl.monitor({ output = ${root._luaString(m.name)}, disabled = true })`
+        } else {
+            const mode = (m.width > 0 && m.height > 0) ? root._modeToLua(m) : ""
+            const position = `${m.x ?? 0}x${m.y ?? 0}`
+            const fields = [
+                `output = ${root._luaString(m.name)}`,
+                mode ? `mode = ${root._luaString(mode)}` : "",
+                `position = ${root._luaString(position)}`,
+                `scale = ${Number(m.scale ?? 1)}`,
+                `transform = ${Number(m.transform ?? 0)}`,
+            ].filter(Boolean)
+            code = `hl.monitor({ ${fields.join(", ")} })`
+        }
+        applyProc.command = ["hyprctl", "eval", code]
         applyProc.running = true
     }
 

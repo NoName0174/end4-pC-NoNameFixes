@@ -2,6 +2,7 @@
 import argparse
 import os
 import re
+import subprocess
 import tempfile
 
 BOOL_KEYS = {
@@ -92,6 +93,11 @@ hl.animation({ leaf = "specialWorkspaceOut", enabled = true, speed = 4, bezier =
 }
 
 
+def lua_string(value):
+    escaped = str(value).replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
 def to_lua_value(key, value):
     if key in BOOL_KEYS:
         return "false" if value == "0" else "true"
@@ -103,7 +109,7 @@ def to_lua_value(key, value):
         return str(float(value))
     except ValueError:
         pass
-    return f'"{value}"'
+    return lua_string(value)
 
 
 def to_lua_line(key, value):
@@ -181,13 +187,59 @@ def edit_lua(file_path, set_pairs, reset_keys):
     write_atomic(file_path, "".join(new_lines))
 
 
-def save_preset(anim_file, preset_name):
+def run_hyprctl(args):
+    try:
+        return subprocess.run(["hyprctl"] + args, capture_output=True, text=True)
+    except FileNotFoundError:
+        return None
+
+
+def apply_live(set_pairs, reset_keys):
+    # Resetting a key means falling back to the hand-written config, which only
+    # a reload can do. The file already contains the new state, so one reload
+    # applies the sets too.
+    if reset_keys:
+        result = run_hyprctl(["reload"])
+        if result and result.returncode != 0:
+            print(f"hyprctl reload failed: {result.stderr.strip()}")
+        return
+
+    for key, value in set_pairs:
+        result = run_hyprctl(["eval", to_lua_line(key, value).strip()])
+        if result is None:
+            return
+        message = (result.stdout + result.stderr).strip()
+        if message and message != "ok":
+            print(f"Live apply failed for {key}: {message}")
+
+
+def apply_anim_file(path):
+    try:
+        with open(path) as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        return
+    for line in lines:
+        code = line.strip()
+        if not code or code.startswith("--"):
+            continue
+        result = run_hyprctl(["eval", code])
+        if result is None:
+            return
+        message = (result.stdout + result.stderr).strip()
+        if message and message != "ok":
+            print(f"Live apply failed: {message}")
+
+
+def save_preset(anim_file, preset_name, apply=False):
     content = ANIM_PRESETS.get(preset_name)
     if not content:
         print(f"Unknown preset '{preset_name}'")
         return
     write_atomic(anim_file, content)
     print(f"Wrote preset '{preset_name}' -> {anim_file}")
+    if apply:
+        apply_anim_file(anim_file)
 
 
 if __name__ == "__main__":
@@ -197,10 +249,11 @@ if __name__ == "__main__":
     p.add_argument("--reset", action="append", metavar="KEY")
     p.add_argument("--anim-preset", metavar="PRESET")
     p.add_argument("--anim-file", default="~/.config/hypr/hyprland/shellOverrides/animations.lua")
+    p.add_argument("--apply", action="store_true", help="Apply the changes immediately with hyprctl eval")
     args = p.parse_args()
 
     if args.anim_preset:
-        save_preset(os.path.expanduser(args.anim_file), args.anim_preset)
+        save_preset(os.path.expanduser(args.anim_file), args.anim_preset, args.apply)
 
     raw_sets   = args.set or []
     reset_keys = args.reset or []
@@ -213,5 +266,7 @@ if __name__ == "__main__":
 
     if set_pairs or reset_keys:
         edit_lua(os.path.expanduser(args.file), set_pairs, reset_keys)
+        if args.apply:
+            apply_live(set_pairs, reset_keys)
     elif not args.anim_preset:
         print("Error: specify --set, --reset, or --anim-preset")

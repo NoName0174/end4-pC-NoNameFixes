@@ -472,7 +472,7 @@ Singleton {
             () => root.hypr.animations.animation,
             value => {
                 root.hypr.animations.animation = value;
-                Quickshell.execDetached(["python3", HyprlandConfig.configuratorScriptPath, "--anim-preset", value]);
+                Quickshell.execDetached(["python3", HyprlandConfig.configuratorScriptPath, "--anim-preset", value, "--apply"]);
             },
             [
                 { displayName: Translation.tr("Elastic"),   icon: "move_selection_right", value: "fast"   },

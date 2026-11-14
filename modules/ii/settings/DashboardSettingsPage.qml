@@ -336,6 +336,13 @@ Item {
         if (WM.compositor === "hyprland") HyprlandOptions.refresh();
     }
 
+    Connections {
+        target: HyprlandConfig
+        function onReloaded() {
+            if (WM.compositor === "hyprland") HyprlandOptions.refresh();
+        }
+    }
+
     readonly property int activeSection: {
         if (groupSections.length === 0) return -1;
         const top = flick.contentY + 8;

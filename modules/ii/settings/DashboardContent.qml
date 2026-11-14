@@ -496,7 +496,7 @@ Item {
                     Image {
                         id: avatarImage
                         anchors.fill: parent
-                        source: Config.options.profile.avatarPath !== ""
+                        source: Config.options.profile.avatarPath !== "" && Config.options.profile.avatarPicture !== ""
                             ? "file://" + Config.options.profile.avatarPicture
                             : "file:///home/" + (Quickshell.env("USER") ?? "user") + "/.face"
                         sourceSize.width: avatarImage.width * 2

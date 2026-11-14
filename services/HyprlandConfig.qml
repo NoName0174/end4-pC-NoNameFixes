@@ -28,12 +28,18 @@ Singleton {
         Quickshell.execDetached(["bash", "-c", "pkill -x hypridle; sleep 0.3; setsid -f hypridle >/dev/null 2>&1"])
     }
 
+    // hyprctl keyword no longer works with Hyprland's Lua configs (0.57+),
+    // so the configurator applies every write with hyprctl eval.
+    function _applyArgs() {
+        return WM.compositor === "hyprland" ? ["--apply"] : []
+    }
+
     function set(key: string, value: var) {
         Quickshell.execDetached([
             "python3", root.configuratorScriptPath,
             "--file", root.shellOverridesPath,
             "--set", key, String(value)
-        ])
+        ].concat(root._applyArgs()))
     }
 
     function setMany(entries: var) {
@@ -41,7 +47,7 @@ Singleton {
         for (let key in entries) {
             args.push("--set", key, String(entries[key]))
         }
-        Quickshell.execDetached(args)
+        Quickshell.execDetached(args.concat(root._applyArgs()))
     }
 
     function reset(key: string) {
@@ -49,7 +55,7 @@ Singleton {
             "python3", root.configuratorScriptPath,
             "--file", root.shellOverridesPath,
             "--reset", key
-        ])
+        ].concat(root._applyArgs()))
     }
 
     function resetMany(keys: list<string>) {
@@ -57,7 +63,7 @@ Singleton {
         for (let i = 0; i < keys.length; i++) {
             args.push("--reset", keys[i])
         }
-        Quickshell.execDetached(args)
+        Quickshell.execDetached(args.concat(root._applyArgs()))
     }
 
     readonly property string borderActiveKey: "general:col:active_border"
@@ -101,7 +107,8 @@ Singleton {
         Quickshell.execDetached([
             "python3", root.configuratorScriptPath,
             "--anim-preset", preset,
-            "--anim-file", root.animOverridesPath
+            "--anim-file", root.animOverridesPath,
+            "--apply"
         ])
     }
 

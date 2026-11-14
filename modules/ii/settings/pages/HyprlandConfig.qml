@@ -12,35 +12,9 @@ ContentPage {
     id: page
     forceWidth: true
 
-    Component.onCompleted: {
-        HyprlandOptions.refresh()
-        const h = Config.options.hyprland
-        // One setMany for everything: separate calls would be separate
-        // processes racing to rewrite the same overrides file.
-        HyprlandConfig.setMany(Object.assign({
-            "decoration:rounding":                  h.decoration.rounding,
-            "decoration:blur:enabled":              h.decoration.blur.enabled ? 1 : 0,
-            "decoration:blur:size":                 h.decoration.blur.size,
-            "decoration:blur:passes":               h.decoration.blur.passes,
-            "decoration:active_opacity":            h.decoration.activeOpacity,
-            "decoration:inactive_opacity":          h.decoration.inactiveOpacity,
-            "general:border_size":                  h.general.borderSize,
-            "general:gaps_in":                      h.general.gapsIn,
-            "general:gaps_out":                     h.general.gapsOut,
-            "general:layout":                       h.general.layout,
-            "animations:enabled":                   h.animations.enable ? 1 : 0,
-            "input:kb_layout":                      h.input.kbLayout,
-            "input:numlock_by_default":             h.input.numlock ? 1 : 0,
-            "input:repeat_delay":                   h.input.repeatDelay,
-            "input:repeat_rate":                    h.input.repeatRate,
-            "input:follow_mouse":                   h.input.followMouse,
-            "input:touchpad:natural_scroll":        h.input.touchpad.naturalScroll ? 1 : 0,
-            "input:touchpad:disable_while_typing":  h.input.touchpad.disableWhileTyping ? 1 : 0,
-            "input:touchpad:clickfinger_behavior":  h.input.touchpad.clickfingerBehavior ? 1 : 0,
-            "input:touchpad:scroll_factor":         h.input.touchpad.scrollFactor,
-            "misc:focus_on_activate":               h.misc.focusOnActivate ? 1 : 0
-        }, HyprlandConfig.borderColorEntries()))
-    }
+    // Read-only on open: visiting the page must not rewrite (and therefore
+    // apply) every option. Each control writes only when the user changes it.
+    Component.onCompleted: HyprlandOptions.refresh()
     MonitorConfigOption { id: monitorConfig }
 
     // Same roles as the settings panel border color on the Interface page.
@@ -138,7 +112,7 @@ ContentPage {
                         icon: "swap_horiz"
                         text: Translation.tr("Position X")
                         value: monitorConfig.monitors[monitorCanvas.selectedIndex]?.x ?? 0
-                        from: 0; to: 7680; stepSize: 1
+                        from: -7680; to: 7680; stepSize: 1
                         onValueChanged: {
                             if (value === (monitorConfig.monitors[monitorCanvas.selectedIndex]?.x ?? 0)) return
                             monitorConfig.updateMonitor(monitorCanvas.selectedIndex, { x: value })
@@ -150,7 +124,7 @@ ContentPage {
                         icon: "swap_vert"
                         text: Translation.tr("Position Y")
                         value: monitorConfig.monitors[monitorCanvas.selectedIndex]?.y ?? 0
-                        from: 0; to: 4320; stepSize: 1
+                        from: -4320; to: 4320; stepSize: 1
                         onValueChanged: {
                             if (value === (monitorConfig.monitors[monitorCanvas.selectedIndex]?.y ?? 0)) return
                             monitorConfig.updateMonitor(monitorCanvas.selectedIndex, { y: value })
@@ -1192,7 +1166,8 @@ ContentPage {
                         saveAnimProc.command = [
                             "python3",
                             HyprlandConfig.configuratorScriptPath,
-                            "--anim-preset", newValue
+                            "--anim-preset", newValue,
+                            "--apply"
                         ]
                         saveAnimProc.running = true
                     }
@@ -1207,7 +1182,7 @@ ContentPage {
             NoticeBox {
                 Layout.fillWidth: true
                 Layout.topMargin: 15
-                text: Translation.tr("Animation presets require a require line in your hyprland.lua. Add the following line to enable presets:") + '\n\nrequire("hyprland/shellOverrides/animations")'
+                text: Translation.tr("Animation presets apply immediately. To keep the selected preset after a restart, add this line to your hyprland.lua:") + '\n\nrequire("hyprland/shellOverrides/animations")'
 
                 Item { Layout.fillWidth: true }
 
@@ -1234,14 +1209,7 @@ ContentPage {
                 }
             }
 
-            Process {
-                id: saveAnimProc
-                onRunningChanged: if (!running) reloadAnimProc.running = true
-            }
-            Process {
-                id: reloadAnimProc
-                command: ["hyprctl", "reload"]
-            }
+            Process { id: saveAnimProc }
         }
     }
 }

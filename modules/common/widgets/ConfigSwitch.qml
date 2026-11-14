@@ -7,6 +7,7 @@ import QtQuick.Controls
 RippleButton {
     id: root
     property string buttonIcon
+    property string description: ""
     property alias iconSize: iconWidget.iconSize
     colBackgroundHover: "transparent"
 
@@ -25,13 +26,28 @@ RippleButton {
             opacity: root.enabled ? 1 : 0.4
             iconSize: Appearance.font.pixelSize.larger
         }
-        StyledText {
-            id: labelWidget
+        ColumnLayout {
             Layout.fillWidth: true
-            text: root.text
-            font: root.font
-            color: Appearance.colors.colOnSecondaryContainer
-            opacity: root.enabled ? 1 : 0.4
+            spacing: 0
+
+            StyledText {
+                id: labelWidget
+                Layout.fillWidth: true
+                text: root.text
+                font: root.font
+                color: Appearance.colors.colOnSecondaryContainer
+                opacity: root.enabled ? 1 : 0.4
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                visible: root.description.length > 0
+                text: root.description
+                font.pixelSize: Appearance.font.pixelSize.smaller
+                color: Appearance.colors.colSubtext
+                wrapMode: Text.Wrap
+                opacity: root.enabled ? 1 : 0.4
+            }
         }
         StyledSwitch {
             id: switchWidget
